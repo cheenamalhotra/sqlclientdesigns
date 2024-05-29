@@ -1,0 +1,135 @@
+@startuml SqlClientXDesign
+title "Proposed class diagram for SqlClientX"
+
+class System.Net.Sockets.NetworkStream {
+    + ValueTask ReadAsync()
+    + Task ReadAsync()
+    + ValueTask WriteAsync()
+    + Task WriteAsync()
+    }
+class System.Net.Sockets.SslStream {
+    + ValueTask ReadAsync()
+    + Task ReadAsync()
+    + ValueTask WriteAsync()
+    + Task WriteAsync()
+}
+class System.IO.Stream {
+    + Position
+    + CanRead
+    + CanWrite
+    + CanSeek
+    + FinishHandshake()
+    + SetLength()
+    + Flush()
+    + Seek()
+    + void Read(byte[] buffer)
+    + Task ReadAsync(byte[] buffer)
+    + Read(Span> buffer)
+    + ValueTask ReadAsync(Memory<byte> buffer)
+    + Write(byte[] buffer)
+    + Task WriteAsync(byte[] buffer)
+    + Write(ReadOnlySpan<byte> buffer)
+    + ValueTask WriteAsync(ReadOnlyMemory<byte> buffer)
+}
+
+package "Microsoft.Data.SqlClientX" {
+    package "Net"{
+        class MessengerResponse {
+            + Socket _socket
+            + bool _reportOnError
+        }
+        abstract class Messenger{
+            + int ProtocolVersion
+            + ValueTask DisposeAsync()
+            + ValueTask SendAsync()
+            + ValueTask ReceiveAsync()
+            + ValueTask EnableSslAsync()
+            + Task AuthenticateAsClientAsync()
+            + Task DisableSslAsync()
+            + CheckConnection()
+            + KillConnection()
+            + RentPacket()
+            + ReturnPacket()
+        }
+        class TcpMessenger extends Messenger{
+            - Socket _socket
+            - Stream _stream
+            - SslStream _sslStream
+            - NetworkStream _tcpStream
+            - SslOverTdsStream _sslOverTdsStream
+            + uint Status
+        }
+        class NpMessenger extends Messenger{}
+        class MessageParameters {
+            + string _targetServer
+            + int _port
+            + bool _tlsFirst
+            + string _hostNameInCertificate
+            + string _serverCertificateFilename
+            + string _cachedFQDN
+            + TimeoutTimer _timeout
+            + SqlConnectionIPAddressPreference _ipAddressPreference
+            + SQLDNSInfo _pendingDNSInfo
+        }
+        class Packet {
+            + int DataLeft
+            + bool IsOutOfBand
+            + int Length
+            + bool IsInvalid
+            + int ReservedHeaderSize
+            + Allocate()
+            + Release()
+            + SetHeaderActive()
+            + Span<byte> GetHeaderBuffer()
+            + GetData(byte[] buffer)
+            + TakeData(Packet packet)
+            + TakeData(byte[] buffer)
+            + AppendData(byte[] data)
+            + ValueTask ReadFromStreamAsync()
+            + ValueTask WriteToStreamAsync()
+        }
+        package "Streams" {
+            class SqlNetworkStream extends System.Net.Sockets.NetworkStream{
+                - _writeAsyncSemaphore
+                - _readAsyncSemaphore
+            }
+            class SqlSslStream extends System.Net.Sockets.SslStream{
+                - _writeAsyncSemaphore
+                - _readAsyncSemaphore
+            }
+            class SslOverTdsStream extends System.IO.Stream {
+                + SetupPreLoginPacketHeader()
+            }
+        }
+    }
+    package "TDS"{
+        package "Handlers"{
+            interface IBufferHandler{}
+            interface IDataParser {
+                + ValueTask ParseDataAsync(byte[] data)
+            }
+            interface ILoginHandler {
+                + Connect()
+            }
+            interface INetworkHandler {
+                + ValueTask ProcessPacketAsync(Packet packet)
+                + ValueTask<NetworkResult> ReadNetworkPacketAsync()
+            }
+            interface IStateHandler {
+                + UpdateState()
+                + GetCurrentState()
+            }
+            interface ITypesHandler {}
+            class BufferHandler implements IBufferHandler {}
+            class DataParser implements IDataParser {}
+            class LoginHandler implements ILoginHandler {}
+            class NetworkHandler implements INetworkHandler {}
+            class StateHandler implements IStateHandler {}
+            class TypesHandler implements ITypesHandler {}
+        }
+        class Executor {
+            + ValueTask RunAsync()
+        }
+    }
+}
+@enduml
