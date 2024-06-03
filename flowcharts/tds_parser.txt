@@ -1,0 +1,45 @@
+Public APIs from TDS Executor:
+
+Properties:
+- Connection
+
+Login/Authentication
+- Connect (send/receive prelogin handshake)
+- Login (send login data)
+- GetDTCAddress
+
+Read data stream
+- TryRun
+	- SendFedAuthToken (can be done internally too)
+- ExecuteSQLBatch
+- ExecuteRPC
+- ExecuteTransactionManagerRequest
+
+- DrainData
+- IncrementNonTransactedOpenResultCount
+- DecrementNonTransactedOpenResultCount
+- ProcessPendingAck > ProcessAttention
+- DisconnectTransaction
+- RollbackOrphanedAPITransactions
+
+MARS Session pool management
+- CreateSession
+- PutSession
+- GetSession
+- Deactivate
+
+Data Serialization / Bulk Copy
+- DeserializeUnencryptedValue
+- LoadColumnEncryptionKeys
+- ShouldEncryptValuesForBulkCopy
+- EncryptColumnValue
+- WriteBulkCopyDone
+
+- ReadPlpUnicodeChars
+- ReadPlpAnsiChars
+- SkipPlpValue
+- TrySkipPlpValue
+
+Error Handler
+- ThrowExceptionAndWarning
+- ProcessSNIError

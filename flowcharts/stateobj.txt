@@ -1,0 +1,11 @@
+TDSParserStateObject Public APIs
+
+Properties:
+- _sessionHandle
+
+- TryProcessHeader
+- ReadAsyncCallback
+- WriteAsyncCallback
+- Dispose
+
+Type readers

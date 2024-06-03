@@ -1,5 +1,45 @@
-@startuml authparamsvalidation
-title "Sql Connection string validation flow"
+@startuml currentcsvalidation
+title "Current: Sql Connection string validation flow"
+
+start;
+if (credential) then (yes)
+    if(Authentication == ActiveDirectoryIntegrated \n| ActiveDirectoryInteractive \n| ActiveDirectoryDeviceCodeFlow \n| ActiveDirectoryManagedIdentity \n| ActiveDirectoryMSI \n| ActiveDirectoryDefault \n| ActiveDirectoryWorkloadIdentity \n|| Clear UserId Or Password \n|| Integrated Security) then (yes)
+        #Yellow :ERROR Combination Not Allowed;
+        end;
+    else (no)
+        #GreenYellow:proceed to login;
+    endif
+else if(access token) then (yes)
+    if(Clear UserId Or Password \n|| Integrated Security \n|| Authentication \n|| credential \n|| accesstokencallback) then (yes)
+        #Yellow :ERROR Combination not allowed;
+        end;
+    else (no)
+        #GreenYellow:proceed to login;
+    endif
+else if(access token callback) then (yes)
+    if(Integrated Security \n|| Authentication \n|| accesstoken) then (yes)
+        #Yellow :ERROR Combination not allowed;
+        end;
+    else (no)
+        #GreenYellow:proceed to login;
+    endif
+else if(Authentication == SqlPassword \n| ActiveDirectoryPassword \n| ActiveDirectoryServicePrincipal) then (yes)
+    if ("userid | uid | user" \n&& "password | pwd" \n|| credential) then (yes)
+        #GreenYellow:proceed to login;
+    else (no)
+        #Yellow :ERROR User Name - Password \nOr Credential not found; 
+        end;
+    endif
+else (no)
+    #GreenYellow :proceed to login;
+endif
+
+stop;
+
+@enduml
+
+@startuml proposedcsvalidation
+title "Proposed: Sql Connection string validation flow (Use Specification design pattern)"
 
 start;
 if (credential) then (yes)
