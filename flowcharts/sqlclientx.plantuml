@@ -1,0 +1,74 @@
+@startuml sqlclientflow
+title "SqlClient Data Flow Diagram"
+
+participant "User" as sqlClientX
+participant "SqlConnection" as sqlClientXConnection
+participant "SqlCommand" as sqlClientXCommand
+participant "SqlDataReader" as sqlClientXDataReader
+sqlClientX ->> sqlClientXConnection: Open Connection
+sqlClientXConnection ->> sqlClientX: Connection Opened
+sqlClientX ->> sqlClientXCommand: Create Command
+sqlClientXCommand ->> sqlClientX: Command Created
+sqlClientX ->> sqlClientXCommand: Execute Command
+sqlClientXCommand ->> sqlClientXDataReader: ExecuteReader
+sqlClientXDataReader ->> sqlClientX: DataReader Returned
+sqlClientX ->> sqlClientXDataReader: Read Data
+sqlClientXDataReader ->> sqlClientX: Data Returned
+
+@enduml
+
+@startuml sequencediagram
+title "SqlClientX Sequence Diagram"
+
+participant "User" as user
+participant "SqlConnection" as sqlconnection
+participant "SqlInternalConnection" as sqlinternalconn
+participant "DbConnectionManager" as dbconnmanager
+participant "LoginHandler" as loginhandler
+participant "AuthenticationProvider" as authprovider
+participant "NetworkUtil" as networkutil << Net >>
+participant "TcpMessenger" as tcpmessenger << Net >>
+participant "System.Net.Dns" as System.Net.Dns #LightCoral
+participant "System.Net.Sockets.UdpClient" as UdpClient #LightCoral
+participant "System.Net.Sockets.Socket" as Socket #LightCoral
+
+user ->> sqlconnection : OpenAsync()
+    sqlconnection ->> dbconnmanager : GetConnectionAsync()
+        dbconnmanager ->> dbconnmanager : OpenLoginEnlistAsync()
+            dbconnmanager ->> dbconnmanager : LoginWithFailoverAsync()
+                dbconnmanager ->> dbconnmanager : AttemptOneLoginAsync()
+                    dbconnmanager ->> loginhandler : ConnectAsync()
+                        loginhandler ->> loginhandler : CreateSSPIContextProvider()
+                            loginhandler ->> loginhandler : CreatePhysicalMessengerAsync()
+                                loginhandler ->> networkutil : static CreateMessengerAsync()
+                                    networkutil ->> networkutil : static CreateAndOpenTcpMessengerAsync()
+                                        networkutil ->> networkutil : GetPortByInstanceName()
+                                            networkutil ->> System.Net.Dns : GetHostAddressesAsync()
+                                            System.Net.Dns ->> networkutil : IPAddress []
+                                            networkutil ->> networkutil : SendUDPRequest()
+                                                networkutil ->> UdpClient : SendAsync()
+                                                UdpClient ->> UdpClient : ReceiveAsync()
+                                                UdpClient ->> networkutil : Response()
+                                            networkutil ->> networkutil : GetSqlServerSPNsAsync()
+                                                networkutil ->> System.Net.Dns : GetHostEntryAsync()
+                                                System.Net.Dns ->> networkutil : IPHostEntry
+                                            networkutil ->> networkutil : new TcpMessenger()
+                                            networkutil ->> tcpmessenger : OpenAsync()
+                                                tcpmessenger ->> tcpmessenger : InternalConnectAsync()
+                                                    tcpmessenger ->> tcpmessenger : ConnectAsync()
+                                                        tcpmessenger ->> System.Net.Dns : GetHostAddressesAsync()
+                                                        System.Net.Dns ->> tcpmessenger : IPAddress []
+                                                        tcpmessenger ->> Socket : ConnectAsync()
+                                                        Socket ->> tcpmessenger : "connected socket"
+                                            tcpmessenger ->> networkutil : "instance + connected Socket"
+                                networkutil ->> loginhandler : "messenger instance"
+                        loginhandler ->> authprovider : Initialize()
+                        loginhandler ->> loginhandler : SendPreloginHandshakeAsync()
+                        loginhandler ->> loginhandler : ConsumePreloginHandshakeAsync()
+                    loginhandler ->> dbconnmanager : "established prelogin handshake"
+                    dbconnmanager ->> dbconnmanager : Login()
+                    dbconnmanager ->> dbconnmanager : CompleteLogin()
+                    dbconnmanager ->> dbconnmanager : "Retry if needed"
+    dbconnmanager ->> sqlconnection : "SqlInternalConnection instance"
+sqlconnection ->> user : "SqlConnection instance"
+@enduml
